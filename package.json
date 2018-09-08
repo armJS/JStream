@@ -1,0 +1,33 @@
+{
+  "name": "JStream",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "jest": "^23.5.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^23.3.1",
+    "ts-jest": "^23.1.4",
+    "typescript": "^3.0.3"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ]
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "Armen Melkonyan",
+  "license": "ISC"
+}
