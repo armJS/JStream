@@ -3,6 +3,16 @@ import Spliterator from "./Spliterator";
 import {initWorkers} from "./utils";
 import Optional from "./Optional";
 
+declare global {
+    interface Array<T> {
+        stream(): JStream<T>;
+    }
+
+    interface Set<T> {
+        stream(): JStream<T>;
+    }
+}
+
 export class JStream<T> implements JStreamBase<T> {
     private _entries: Array<T> = [];
     private _chanks: Array<Array<T>> = [];
@@ -13,12 +23,26 @@ export class JStream<T> implements JStreamBase<T> {
     private _skip: number = 0;
     //_operations: Array<Action> = [];
 
-    constructor(entries: Array<T>) {
-        this._entries = entries;
+    constructor(entries: Array<T> | Set<T>) {
+        this._entries = [...entries];
     }
 
-    static of<T>(entries: Array<T>): JStream<T> {
+    static of<T>(entries: Array<T> | Set<T>): JStream<T> {
         return new JStream(entries);
+    }
+    
+    static addExtensions() {
+        if (!Array.prototype.stream) {
+            Array.prototype.stream = function () {
+                return JStream.of(this);
+            }
+        }
+
+        if (!Set.prototype.stream) {
+            Set.prototype.stream = function () {
+                return JStream.of(this);
+            }
+        }
     }
 
     parallel(): JStream<T> {
@@ -85,10 +109,6 @@ export class JStream<T> implements JStreamBase<T> {
         return Optional.of(slicedArr.sort(comparator)[slicedArr.length - 1]);
     }
 
-    toArray(): Array<T> {
-        return this._entries;
-    }
-
     noneMatch(predicate: (entry: T) => boolean): boolean {
         return !(this._entries.slice(this._skip, this._limit ? this._limit : undefined).every(predicate));
     }
@@ -101,10 +121,6 @@ export class JStream<T> implements JStreamBase<T> {
         return this._entries.slice(this._skip, this._limit ? this._limit : undefined).every(predicate);
     }
 
-    groupingBy(classifier: (entry: T) => any): Map<any, Array<T>> {
-        return _groupingBy(this._entries, classifier, this._skip, this._limit);
-    }
-
     forEach(callback: (entry: T) => void): void {
         if (this._isParallel) {
             this._workers.forEach((w, index) => w.postMessage({
@@ -112,7 +128,6 @@ export class JStream<T> implements JStreamBase<T> {
                 chunk: this._chanks[index],
                 jsonCallback: JSON.stringify(callback.toString())
             }));
-            //throw new Error('Parallel processing not supported yet');
         } else {
             _forEach(this._entries, callback, this._skip, this._limit)
         }
@@ -122,7 +137,31 @@ export class JStream<T> implements JStreamBase<T> {
         return this._entries.reduce(reducer, initialValue);
     };
 
+    // todo: implementation not completed.
+    count(): number {
+        let l = this._entries.length - this._skip;
 
+        if(l < 0) return 0;
+
+
+        return l;
+    }
+
+    toArray(): Array<T> {
+        return this._entries;
+    }
+
+    toSet(): Set<T> {
+        return new Set<T>(this._entries);
+    }
+
+    groupingBy(classifier: (entry: T) => any): Map<any, Array<T>> {
+        return _groupingBy(this._entries, classifier, this._skip, this._limit);
+    }
+
+    partitioningBy(predicate: (entry: T) => boolean): Map<boolean, Array<T>> {
+        return _partitioningBy(this._entries, predicate, this._skip, this._limit);
+    }
 
 }
 
@@ -159,6 +198,18 @@ function _groupingBy<T>(entries: Array<T>, classifier: (entry: T) => any, skip: 
         } else {
             accumulator.set(key, [entries[i]])
         }
+    }
+
+    return accumulator;
+}
+
+function _partitioningBy<T>(entries: Array<T>, predicate: (entry: T) => boolean, skip: number = 0, limit: number = 0): Map<boolean, Array<T>> {
+    let accumulator = new Map().set(true, []).set(false, []);
+    limit = limit || entries.length;
+
+    for (let i: number = skip; i < limit; i++) {
+        let key = predicate(entries[i]);
+        accumulator.get(key).push([entries[i]]);
     }
 
     return accumulator;

@@ -30,4 +30,14 @@ export interface JStreamBase<T> {
     forEach(callback: (entry: T) => void): void;
 
     reduce(reducer: (accumulator: T, currentValue: T) => T, initialValue: T): T;
+
+    count(): number;
+
+    toArray(): Array<T>;
+
+    toSet(): Set<T>;
+
+    groupingBy(classifier: (entry: T) => any): Map<any, Array<T>>;
+
+    partitioningBy(predicate: (entry: T) => boolean): Map<boolean, Array<T>>;
 }
