@@ -5,7 +5,7 @@ export interface OptionalBase<T> {
 }
 
 export default class Optional<T> implements OptionalBase<T> {
-    _value?: T;
+    private readonly _value?: T;
 
     constructor(value?: T) {
         this._value = value;
